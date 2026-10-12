@@ -1,0 +1,216 @@
+/* Alias design system — warm cream, near-black ink, lilac identity, mint success, restrained coral. */
+@font-face {
+  font-family: 'Nunito';
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/nunito-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Nunito';
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/nunito-600.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Nunito';
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/nunito-800.woff2') format('woff2');
+}
+
+:root {
+  --cream: #faf4e8;
+  --cream-deep: #f3ead7;
+  --card: #fffdf8;
+  --ink: #211d17;
+  --ink-soft: #6f6758;
+  --line: #e9dfcb;
+  --lilac: #cbb7f0;
+  --lilac-soft: #ebe3fa;
+  --lilac-ink: #4a3a74;
+  --mint: #bfe8cf;
+  --mint-soft: #e2f5e9;
+  --mint-ink: #22684a;
+  --coral: #ee6f4f;
+  --coral-soft: #fbe3dc;
+  --amber-soft: #fdf0d4;
+  --amber-ink: #8a6210;
+  --radius-card: 18px;
+  --radius-button: 14px;
+  --shadow-card: 0 1px 2px rgba(63, 50, 24, 0.05), 0 6px 18px rgba(63, 50, 24, 0.07);
+  --font: 'Nunito', 'Segoe UI', system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  background: var(--cream);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font-family: var(--font);
+  cursor: pointer;
+  border: none;
+}
+
+input,
+select,
+textarea {
+  font-family: var(--font);
+  font-size: 15px;
+  color: var(--ink);
+}
+
+a {
+  color: var(--lilac-ink);
+  text-decoration: none;
+  font-weight: 600;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 13px 16px;
+  border-radius: var(--radius-button);
+  font-size: 15px;
+  font-weight: 800;
+  transition: transform 0.08s ease, filter 0.12s ease;
+}
+.btn:active {
+  transform: scale(0.985);
+}
+.btn-primary {
+  background: var(--ink);
+  color: var(--cream);
+}
+.btn-primary:hover {
+  filter: brightness(1.15);
+}
+.btn-primary:disabled {
+  background: #cfc6b4;
+  color: #fff;
+  cursor: default;
+  transform: none;
+}
+.btn-mint {
+  background: var(--mint);
+  color: var(--mint-ink);
+}
+.btn-coral {
+  background: var(--coral);
+  color: #fff;
+}
+.btn-ghost {
+  background: transparent;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+.btn-ghost:hover {
+  color: var(--ink);
+}
+.btn-soft {
+  background: var(--cream-deep);
+  color: var(--ink);
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.chip-mint {
+  background: var(--mint-soft);
+  color: var(--mint-ink);
+}
+.chip-lilac {
+  background: var(--lilac-soft);
+  color: var(--lilac-ink);
+}
+.chip-amber {
+  background: var(--amber-soft);
+  color: var(--amber-ink);
+}
+.chip-coral {
+  background: var(--coral-soft);
+  color: #9c3a22;
+}
+
+.muted {
+  color: var(--ink-soft);
+}
+.small {
+  font-size: 12.5px;
+}
+.mono {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+.field {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-button);
+  background: var(--card);
+  outline: none;
+}
+.field:focus {
+  border-color: var(--lilac);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Simple spinner for real network/proving work. */
+.spin {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2.5px solid var(--line);
+  border-top-color: var(--ink);
+  animation: alias-spin 0.8s linear infinite;
+}
+@keyframes alias-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spin {
+    animation: alias-spin 2s linear infinite !important;
+  }
+}

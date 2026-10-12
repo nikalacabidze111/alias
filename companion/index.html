@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Alias: Fund privately</title>
+    <link rel="stylesheet" href="theme.css" />
+    <style>
+      body {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px 16px;
+      }
+      .panel {
+        width: 100%;
+        max-width: 420px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .head {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .head h1 {
+        font-size: 21px;
+        font-weight: 800;
+      }
+      .head p {
+        font-size: 13.5px;
+        color: var(--ink-soft);
+      }
+      .wallets {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .wallet-btn {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 13px 14px;
+        text-align: left;
+        font-size: 15px;
+        font-weight: 800;
+        background: var(--card);
+        border: 1.5px solid var(--line);
+        border-radius: var(--radius-card);
+      }
+      .wallet-btn:hover {
+        border-color: var(--lilac);
+        background: var(--lilac-soft);
+      }
+      .wallet-btn img {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+      }
+      .status {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        padding: 13px 14px;
+      }
+      .big-amount {
+        font-size: 30px;
+        font-weight: 800;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="panel" id="panel">
+      <div class="status card"><div class="spin"></div><span class="muted">Looking for the Alias extension…</span></div>
+    </div>
+    <script src="companion.js"></script>
+  </body>
+</html>
