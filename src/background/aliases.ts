@@ -3,6 +3,7 @@ import { Connection } from '@solana/web3.js';
 import type { AliasInfo } from '../shared/messages';
 import type { AliasKind } from '../shared/constants';
 import { uid } from '../shared/format';
+import { isSingleEmoji } from '../shared/emoji';
 import { deriveAliasKeypair, getSessionSeed } from './vault';
 import { getConnection } from './settings';
 
@@ -21,8 +22,9 @@ export async function getAlias(id: string): Promise<AliasInfo | undefined> {
   return (await listAliases()).find((a) => a.id === id);
 }
 
-export async function createAlias(name: string, kind: AliasKind): Promise<AliasInfo> {
+export async function createAlias(name: string, kind: AliasKind, emoji?: string): Promise<AliasInfo> {
   if (!(await getSessionSeed())) throw new Error('Vault is locked');
+  if (emoji !== undefined && !isSingleEmoji(emoji)) throw new Error('Pick a single emoji');
   const list = await listAliases();
   const index = list.length === 0 ? 0 : Math.max(...list.map((a) => a.index)) + 1;
   const keypair = await deriveAliasKeypair(index);
@@ -33,6 +35,7 @@ export async function createAlias(name: string, kind: AliasKind): Promise<AliasI
     address: keypair.publicKey.toBase58(),
     index,
     avatarSeed: Math.floor(Math.random() * 1_000_000),
+    ...(emoji ? { emoji: emoji.trim() } : {}),
     createdAt: Date.now(),
   };
   list.push(info);
@@ -46,6 +49,24 @@ export async function renameAlias(id: string, name: string): Promise<void> {
   if (!alias) throw new Error('Alias not found');
   alias.name = name.trim() || alias.name;
   await saveAliases(list);
+}
+
+export async function updateAlias(id: string, patch: { name?: string; emoji?: string }): Promise<AliasInfo> {
+  const list = await listAliases();
+  const alias = list.find((a) => a.id === id);
+  if (!alias) throw new Error('Alias not found');
+  if (patch.name !== undefined) {
+    const name = patch.name.trim();
+    if (!name) throw new Error('Give the alias a name');
+    if (name.length > 40) throw new Error('Keep the name under 40 characters');
+    alias.name = name;
+  }
+  if (patch.emoji !== undefined) {
+    if (!isSingleEmoji(patch.emoji)) throw new Error('Pick a single emoji');
+    alias.emoji = patch.emoji.trim();
+  }
+  await saveAliases(list);
+  return alias;
 }
 
 function defaultName(kind: AliasKind): string {

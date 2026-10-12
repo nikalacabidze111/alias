@@ -1,6 +1,7 @@
 import type { Connection } from '@solana/web3.js';
 import { DEFAULT_LIMITS, type Network } from '../shared/constants';
 import { makeConnection } from '../shared/rpc';
+import { defaultFundingPage, LOCAL_FUNDING_PAGE } from '../shared/hosting';
 import type { SettingsState } from '../shared/messages';
 
 const SETTINGS_KEY = 'settings.v1';
@@ -10,12 +11,17 @@ export const DEFAULT_SETTINGS: SettingsState = {
   mainnetEnabled: false,
   perOperationSol: DEFAULT_LIMITS.perOperationSol,
   perTransactionSol: DEFAULT_LIMITS.perTransactionSol,
-  companionUrl: 'http://localhost:8765',
+  companionUrl: defaultFundingPage(),
 };
 
 export async function getSettings(): Promise<SettingsState> {
   const stored = await chrome.storage.local.get(SETTINGS_KEY);
-  return { ...DEFAULT_SETTINGS, ...((stored[SETTINGS_KEY] as Partial<SettingsState> | undefined) ?? {}) };
+  const merged = { ...DEFAULT_SETTINGS, ...((stored[SETTINGS_KEY] as Partial<SettingsState> | undefined) ?? {}) };
+  // Installs saved with the old local funding page move to the hosted one.
+  if (merged.companionUrl.replace(/\/+$/, '') === LOCAL_FUNDING_PAGE && DEFAULT_SETTINGS.companionUrl !== LOCAL_FUNDING_PAGE) {
+    merged.companionUrl = DEFAULT_SETTINGS.companionUrl;
+  }
+  return merged;
 }
 
 export async function updateSettings(patch: Partial<SettingsState>): Promise<SettingsState> {

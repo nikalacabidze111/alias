@@ -1,3 +1,4 @@
+import { markSvg } from '../src/shared/brand';
 // Alias funding companion: a plain web page where installed wallets (Phantom,
 // Solflare, ...) actually live. It discovers them through the Wallet Standard,
 // lets the user pick one, and signs the deposit transaction the extension
@@ -51,7 +52,7 @@ function statusCard(text: string, spinning = true): string {
 
 function head(title: string, sub: string): string {
   return `<div class="head">
-    <svg width="44" height="44" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#F7F1E5"/><circle cx="32" cy="33" r="19" fill="#FFE9B8"/><rect x="10" y="25" width="44" height="13" rx="6.5" fill="#B9A3F0"/><circle cx="24" cy="31.5" r="3.4" fill="#211D17"/><circle cx="40" cy="31.5" r="3.4" fill="#211D17"/><path d="M26 44c2 2.4 10 2.4 12 0" stroke="#211D17" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg>
+    ${markSvg(40)}
     <div><h1>${esc(title)}</h1><p>${esc(sub)}</p></div>
   </div>`;
 }
@@ -149,7 +150,7 @@ function showStatus(text: string, state: 'working' | 'failed' | 'done'): void {
         ${state === 'working' ? '<div class="spin" style="display:inline-block;vertical-align:middle;margin-right:8px"></div>' : ''}${esc(text)}
       </div>` +
       (state === 'failed'
-        ? `<p class="muted" style="font-size:13px;text-align:center">Close this tab and start again from Alias when you are ready. Anything already sent is listed in Alias History.</p>`
+        ? `<p class="muted" style="font-size:13px">Close this tab and start again from Alias when you are ready. Anything already sent is listed in Alias History.</p>`
         : ''),
   );
 }
@@ -213,7 +214,7 @@ function renderWalletPicker(bridge: AliasBridge, opId: string, op: { amountLampo
                   `<button class="wallet-btn" data-i="${i}"><img src="${esc(w.icon)}" alt="" /><span>${esc(w.name)}</span></button>`,
               )
               .join('')}</div>
-             <p class="muted" style="font-size:12.5px;text-align:center">Your wallet only signs its own deposit. Alias never sees its keys.</p>`
+             <p class="muted" style="font-size:12.5px">Your wallet only signs its own deposit. Alias never sees its keys.</p>`
           : statusCard('Looking for installed wallets… Install Phantom or Solflare if none appear.')),
     );
     panel.querySelectorAll<HTMLButtonElement>('.wallet-btn').forEach((btn) => {

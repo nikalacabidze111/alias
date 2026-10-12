@@ -441,31 +441,48 @@ async function main() {
   await popup.screenshot({ path: `${shots}/17-home-pending.png` });
   await assertNoScroll(popup, 'home with pending payout');
 
-  // Every pill, including "+ New", sits fully inside the popup.
-  async function pillsInside() {
-    return popup.$$eval('#switch .alias-pill', (els) =>
-      els.every((el) => {
-        const r = el.getBoundingClientRect();
-        return r.left >= 0 && r.right <= window.innerWidth && r.bottom <= window.innerHeight;
-      }),
-    );
-  }
-  record('alias pills are not clipped (2 aliases)', await pillsInside());
+  // Activity list on Home: the failed funding and the fixture payout for this alias.
+  const actRows = await popup.$$eval('#activity .act-row', (els) => els.length);
+  record('home lists this alias activity under the pending card', actRows === 2, `${actRows} rows`);
+  const inside = await popup.$$eval('.home button, .nav button', (els) =>
+    els.every((el) => {
+      const r = el.getBoundingClientRect();
+      return r.left >= 0 && r.right <= window.innerWidth && r.bottom <= window.innerHeight;
+    }),
+  );
+  record('home controls are not clipped', inside);
 
-  // Many aliases: Home caps the pills and links to a paginated list.
+  // Emoji and name editor.
+  await popup.click('#edit-alias');
+  await popup.waitForSelector('.emoji-grid', { timeout: 10000 });
+  await assertNoScroll(popup, 'edit alias');
+  await popup.click('.emoji-opt[data-emoji="🦊"]');
+  await popup.fill('#name', 'Trading Fox');
+  await popup.screenshot({ path: `${shots}/22-edit-alias.png` });
+  await popup.click('#save');
+  await popup.waitForSelector('#balance', { timeout: 10000 });
+  const head = ((await popup.textContent('.card-head')) ?? '').replace(/\s+/g, ' ').trim();
+  record('picked emoji and new name show on Home', head.includes('🦊') && head.includes('Trading Fox'), head);
+  await popup.click('#edit-alias');
+  await popup.waitForSelector('#custom', { timeout: 10000 });
+  await popup.fill('#custom', 'abc');
+  record('custom emoji field accepts only a single emoji', /single emoji/.test((await popup.textContent('.error-text')) ?? ''));
+  await popup.evaluate(() => {
+    location.hash = '/';
+  });
+  await popup.waitForSelector('#balance', { timeout: 10000 });
+
+  // Many aliases: the switcher in the card header opens a paginated list.
   await popup.evaluate(async () => {
     for (const name of ['Alpha', 'Bravo', 'Charlie', 'Delta']) {
       await chrome.runtime.sendMessage({ type: 'alias.create', name, kind: 'everyday' });
     }
   });
   await popup.reload();
-  await popup.waitForSelector('#switch', { timeout: 10000 });
-  const pillText = ((await popup.textContent('#switch')) ?? '').replace(/\s+/g, ' ');
-  record('home caps alias pills and offers All', /All 6/.test(pillText) && (await popup.$$('#switch [data-alias]')).length === 3, pillText.trim());
-  record('alias pills are not clipped (6 aliases)', await pillsInside());
+  await popup.waitForSelector('.switcher', { timeout: 10000 });
   await assertNoScroll(popup, 'home with 6 aliases');
   await popup.screenshot({ path: `${shots}/19-home-many.png` });
-  await popup.click('#switch [data-nav="/aliases"]');
+  await popup.click('.switcher');
   await popup.waitForSelector('.pager', { timeout: 10000 });
   await assertNoScroll(popup, 'all aliases (page 1)');
   await popup.screenshot({ path: `${shots}/20-aliases.png` });
@@ -474,6 +491,11 @@ async function main() {
   record('all-aliases screen paginates (5 + 1)', page2 === 1, `${page2} on page 2`);
   await popup.click('[data-alias]');
   await popup.waitForSelector('#balance', { timeout: 10000 });
+  await popup.waitForSelector('.getting-started li', { timeout: 10000 }).catch(() => {});
+  const steps = await popup.$$eval('.getting-started li', (els) => els.length);
+  record('a new alias shows the 3-step start instead of empty space', steps === 3);
+  await assertNoScroll(popup, 'home (new alias)');
+  await popup.screenshot({ path: `${shots}/23-home-new-alias.png` });
 
   const waitPage = await context.newPage();
   await waitPage.setViewportSize({ width: 420, height: 680 });
@@ -486,11 +508,13 @@ async function main() {
   await waitPage.close();
 
   // ---------- restart handling: lock + reopen ----------
-  await popup.goto(popupUrl('#/history'));
-  await popup.waitForSelector('.screen', { timeout: 10000 });
+  await popup.evaluate(() => {
+    location.hash = '/history';
+  });
+  await popup.waitForFunction(() => document.querySelector('.topbar .title')?.textContent === 'Activity', null, { timeout: 10000 });
   await popup.screenshot({ path: `${shots}/13-history.png` });
   const historyText = await popup.textContent('.screen');
-  record('history lists the operation with its state', /0\.02|Fund/i.test(historyText ?? ''));
+  record('activity lists every operation with its status', (await popup.$$eval('#activity .act-row', (els) => els.length)) === 2 && /Failed/.test(historyText ?? '') && /Scheduled/.test(historyText ?? ''));
   await assertNoScroll(popup, 'history');
 
   // Lock, then unlock: aliases and history survive.
@@ -512,8 +536,9 @@ async function main() {
       location.hash = '/';
     });
     await popup.waitForSelector('#balance', { timeout: 10000 });
-    const homeText = await popup.textContent('.screen');
-    record('lock/unlock round-trip keeps aliases', /Trading Alias/i.test(homeText ?? ''));
+    const count = await popup.evaluate(async () => (await chrome.runtime.sendMessage({ type: 'alias.list' })).result.length);
+    const name = ((await popup.textContent('.alias-name')) ?? '').trim();
+    record('lock/unlock round-trip keeps aliases', count === 6 && name.length > 0, `${count} aliases, showing ${name}`);
   } else {
     record('lock/unlock round-trip keeps aliases', false, 'no Lock now button');
   }
@@ -524,10 +549,29 @@ async function main() {
 
   const failed = results.filter((r) => !r.ok);
   console.log(`\n${results.length - failed.length}/${results.length} browser checks passed`);
-  if (failed.length) process.exit(1);
+  if (failed.length) process.exitCode = 1;
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+// These checks use the local funding page (localhost:8765). If a hosted
+// Alias server is configured, build without it for the run, then restore.
+import { execSync as __exec } from 'node:child_process';
+import { writeFileSync as __write } from 'node:fs';
+const __cfg = new URL('../alias.config.json', import.meta.url).pathname;
+const __original = readFileSync(__cfg, 'utf8');
+const __hosted = Boolean(JSON.parse(__original).server);
+if (__hosted) {
+  __write(__cfg, JSON.stringify({ server: '' }, null, 2));
+  __exec('node build.mjs', { stdio: 'ignore' });
+}
+const __restore = () => {
+  if (!__hosted) return;
+  __write(__cfg, __original);
+  __exec('node build.mjs', { stdio: 'ignore' });
+};
+main()
+  .then(() => __restore())
+  .catch((e) => {
+    console.error(e);
+    __restore();
+    process.exit(1);
+  });

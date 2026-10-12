@@ -77,3 +77,13 @@ describe('makeFallbackFetch', () => {
     expect(seen.slice(0, 2)).toEqual(RPC_FALLBACKS['mainnet-beta'].slice(0, 2));
   });
 });
+
+describe('hosted Alias relay', () => {
+  it('goes first on mainnet (after your own RPC) and never on devnet', () => {
+    const relay = 'https://alias.example.workers.dev/rpc';
+    expect(endpointsFor('mainnet-beta', undefined, relay)[0]).toBe(relay);
+    expect(endpointsFor('mainnet-beta', 'https://mine.rpc/k', relay).slice(0, 2)).toEqual(['https://mine.rpc/k', relay]);
+    expect(endpointsFor('devnet', undefined, relay)).not.toContain(relay);
+    expect(endpointsFor('mainnet-beta', undefined, null)).toEqual(RPC_FALLBACKS['mainnet-beta']);
+  });
+});

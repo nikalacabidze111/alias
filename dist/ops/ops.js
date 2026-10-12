@@ -68529,6 +68529,15 @@ Message: ${transactionMessage}.
   // src/shared/rpc.ts
   init_build_inject();
   var import_web3 = __toESM(require_index_browser_cjs(), 1);
+
+  // src/shared/hosting.ts
+  init_build_inject();
+  var ALIAS_SERVER = true ? "https://alias.nikalacabidze111.workers.dev" : "";
+  function relayRpcUrl(server = ALIAS_SERVER) {
+    return server ? `${server}/rpc` : null;
+  }
+
+  // src/shared/rpc.ts
   var RPC_FALLBACKS = {
     "mainnet-beta": [
       "https://solana-rpc.publicnode.com",
@@ -68539,8 +68548,9 @@ Message: ${transactionMessage}.
     devnet: ["https://api.devnet.solana.com"]
   };
   var TRY_NEXT = /* @__PURE__ */ new Set([401, 403, 404, 405, 429, 500, 502, 503, 504]);
-  function endpointsFor(network, customRpc) {
+  function endpointsFor(network, customRpc, relay = relayRpcUrl()) {
     const list = [...RPC_FALLBACKS[network]];
+    if (relay && network === "mainnet-beta") list.unshift(relay);
     if (customRpc && /^https:\/\/[^\s]+$/.test(customRpc.trim())) list.unshift(customRpc.trim());
     return [...new Set(list)];
   }
@@ -68571,6 +68581,23 @@ Message: ${transactionMessage}.
   function makeConnection(network, customRpc, commitment = "confirmed") {
     const endpoints = endpointsFor(network, customRpc);
     return new import_web3.Connection(endpoints[0], { commitment, fetch: makeFallbackFetch(endpoints) });
+  }
+
+  // src/shared/brand.ts
+  init_build_inject();
+
+  // src/shared/emoji.ts
+  init_build_inject();
+
+  // src/shared/brand.ts
+  var MARK_A = "M452,190 L572,190 L854,830 L724,830 L668,702 L356,702 L300,830 L170,830 Z M512,338 L568,478 L456,478 Z M306,560 C362,552 424,546 472,566 C492,574 502,580 512,580 C522,580 532,574 552,566 C600,546 662,552 718,560 C708,604 686,644 640,652 C598,660 560,632 512,632 C464,632 426,660 384,652 C338,644 316,604 306,560 Z";
+  var MARK_EYES = "M388,592 C404,582 430,582 446,596 C430,610 404,610 388,592 Z M578,596 C594,582 620,582 636,592 C620,610 594,610 578,596 Z";
+  var BRAND = { ink: "#1E1812", lilac: "#AE94F6", paper: "#F7F2E8" };
+  function markSvg(size, opts = {}) {
+    const tile = opts.tile ?? true;
+    const ink = opts.ink ?? BRAND.ink;
+    const bg2 = opts.bg ?? BRAND.lilac;
+    return `<svg class="mark" width="${size}" height="${size}" viewBox="0 0 1024 1024" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">${tile ? `<rect width="1024" height="1024" rx="230" fill="${bg2}"/>` : ""}<path fill-rule="evenodd" fill="${ink}" d="${MARK_A}"/><path fill="${ink}" d="${MARK_EYES}"/></svg>`;
   }
 
   // src/shared/format.ts
@@ -118147,13 +118174,7 @@ Encrypted output 1 size: ${encryptedOutput1.length} bytes`);
   function render() {
     app.innerHTML = `
     <div class="ops-head">
-      <svg width="46" height="46" viewBox="0 0 64 64" aria-hidden="true">
-        <circle cx="32" cy="33" r="21" fill="#FFE9B8"/>
-        <rect x="8" y="24.5" width="48" height="14" rx="7" fill="var(--lilac)"/>
-        <circle cx="23.5" cy="31.5" r="3.6" fill="var(--ink)"/>
-        <circle cx="40.5" cy="31.5" r="3.6" fill="var(--ink)"/>
-        <path d="M25 45c2.4 2.8 11.6 2.8 14 0" stroke="var(--ink)" stroke-width="2.8" stroke-linecap="round" fill="none"/>
-      </svg>
+      ${markSvg(40)}
       <div><h1>${esc(title)}</h1><div class="sub">${esc(subtitle)}</div></div>
     </div>
     <div class="steps">

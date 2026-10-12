@@ -14,6 +14,7 @@ import bs58 from 'bs58';
 import { bgCall, type OperationRecord, type SettingsState } from '../shared/messages';
 import { explorerTxUrl } from '../shared/constants';
 import { makeConnection } from '../shared/rpc';
+import { markSvg } from '../shared/brand';
 import { formatWhen, lamportsToSol, shortAddress } from '../shared/format';
 import {
   liveConfig,
@@ -105,13 +106,7 @@ function setLog(line: string): void {
 function render(): void {
   app.innerHTML = `
     <div class="ops-head">
-      <svg width="46" height="46" viewBox="0 0 64 64" aria-hidden="true">
-        <circle cx="32" cy="33" r="21" fill="#FFE9B8"/>
-        <rect x="8" y="24.5" width="48" height="14" rx="7" fill="var(--lilac)"/>
-        <circle cx="23.5" cy="31.5" r="3.6" fill="var(--ink)"/>
-        <circle cx="40.5" cy="31.5" r="3.6" fill="var(--ink)"/>
-        <path d="M25 45c2.4 2.8 11.6 2.8 14 0" stroke="var(--ink)" stroke-width="2.8" stroke-linecap="round" fill="none"/>
-      </svg>
+      ${markSvg(40)}
       <div><h1>${esc(title)}</h1><div class="sub">${esc(subtitle)}</div></div>
     </div>
     <div class="steps">

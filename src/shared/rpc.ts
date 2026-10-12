@@ -8,6 +8,7 @@
 // subject to CORS, so only server-side refusals matter here.
 import { Connection, type Commitment, type FetchFn } from '@solana/web3.js';
 import type { Network } from './constants';
+import { relayRpcUrl } from './hosting';
 
 export const RPC_FALLBACKS: Record<Network, string[]> = {
   'mainnet-beta': [
@@ -22,8 +23,10 @@ export const RPC_FALLBACKS: Record<Network, string[]> = {
 // HTTP answers that mean "this server will not serve us right now".
 const TRY_NEXT = new Set([401, 403, 404, 405, 429, 500, 502, 503, 504]);
 
-export function endpointsFor(network: Network, customRpc?: string): string[] {
+// Order: your own RPC (Settings), the Alias relay (mainnet), then public servers.
+export function endpointsFor(network: Network, customRpc?: string, relay = relayRpcUrl()): string[] {
   const list = [...RPC_FALLBACKS[network]];
+  if (relay && network === 'mainnet-beta') list.unshift(relay);
   if (customRpc && /^https:\/\/[^\s]+$/.test(customRpc.trim())) list.unshift(customRpc.trim());
   return [...new Set(list)];
 }

@@ -91,7 +91,9 @@ async function handlePrivileged(req: BgRequest): Promise<BgResponse> {
     case 'alias.list':
       return ok(await aliases.listAliases());
     case 'alias.create':
-      return ok(await aliases.createAlias(req.name, req.kind));
+      return ok(await aliases.createAlias(req.name, req.kind, req.emoji));
+    case 'alias.update':
+      return ok(await aliases.updateAlias(req.id, { name: req.name, emoji: req.emoji }));
     case 'alias.rename':
       await aliases.renameAlias(req.id, req.name);
       return ok(true);

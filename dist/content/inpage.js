@@ -2190,6 +2190,23 @@
   var ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
   var esm_default2 = esm_default(ALPHABET);
 
+  // src/shared/brand.ts
+  init_build_inject();
+
+  // src/shared/emoji.ts
+  init_build_inject();
+
+  // src/shared/brand.ts
+  var MARK_A = "M452,190 L572,190 L854,830 L724,830 L668,702 L356,702 L300,830 L170,830 Z M512,338 L568,478 L456,478 Z M306,560 C362,552 424,546 472,566 C492,574 502,580 512,580 C522,580 532,574 552,566 C600,546 662,552 718,560 C708,604 686,644 640,652 C598,660 560,632 512,632 C464,632 426,660 384,652 C338,644 316,604 306,560 Z";
+  var MARK_EYES = "M388,592 C404,582 430,582 446,596 C430,610 404,610 388,592 Z M578,596 C594,582 620,582 636,592 C620,610 594,610 578,596 Z";
+  var BRAND = { ink: "#1E1812", lilac: "#AE94F6", paper: "#F7F2E8" };
+  function markSvg(size, opts = {}) {
+    const tile = opts.tile ?? true;
+    const ink = opts.ink ?? BRAND.ink;
+    const bg = opts.bg ?? BRAND.lilac;
+    return `<svg class="mark" width="${size}" height="${size}" viewBox="0 0 1024 1024" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">${tile ? `<rect width="1024" height="1024" rx="230" fill="${bg}"/>` : ""}<path fill-rule="evenodd" fill="${ink}" d="${MARK_A}"/><path fill="${ink}" d="${MARK_EYES}"/></svg>`;
+  }
+
   // src/shared/messages.ts
   init_build_inject();
   var CHANNEL_TO_RELAY = "alias:to-extension";
@@ -2232,8 +2249,7 @@
       return () => companionTaskListeners.delete(listener);
     }
   };
-  var ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#F7F1E5"/><circle cx="32" cy="33" r="19" fill="#FFE9B8"/><rect x="10" y="25" width="44" height="13" rx="6.5" fill="#B9A3F0"/><circle cx="24" cy="31.5" r="3.4" fill="#211D17"/><circle cx="40" cy="31.5" r="3.4" fill="#211D17"/><path d="M26 44c2 2.4 10 2.4 12 0" stroke="#211D17" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg>`;
-  var ICON = `data:image/svg+xml;base64,${btoa(ICON_SVG)}`;
+  var ICON = `data:image/svg+xml;base64,${btoa(markSvg(64))}`;
   var CHAINS = ["solana:mainnet", "solana:devnet"];
   function makeAccount(address, network) {
     const chain = network === "mainnet-beta" ? "solana:mainnet" : "solana:devnet";

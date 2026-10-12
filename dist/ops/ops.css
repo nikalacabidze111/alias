@@ -16,8 +16,9 @@ body {
   gap: 12px;
 }
 .ops-head h1 {
-  font-size: 19px;
+  font-size: 20px;
   font-weight: 800;
+  letter-spacing: -0.02em;
 }
 .ops-head .sub {
   font-size: 13px;
@@ -40,7 +41,7 @@ body {
 .step .dot {
   width: 22px;
   height: 22px;
-  border-radius: 50%;
+  border-radius: 7px;
   flex: 0 0 auto;
   display: flex;
   align-items: center;
@@ -51,17 +52,23 @@ body {
   color: var(--ink-soft);
   margin-top: 1px;
 }
+.step.active {
+  border-color: var(--ink);
+}
 .step.active .dot {
   background: var(--lilac);
-  color: var(--lilac-ink);
+  color: var(--ink);
 }
 .step.done .dot {
-  background: var(--mint);
-  color: var(--mint-ink);
+  background: var(--ink);
+  color: var(--lilac);
+}
+.step.failed {
+  border-color: var(--coral);
 }
 .step.failed .dot {
-  background: var(--coral-soft);
-  color: #9c3a22;
+  background: var(--coral);
+  color: #fff;
 }
 .step .body {
   flex: 1;
@@ -93,7 +100,7 @@ body {
   text-overflow: ellipsis;
 }
 .error-text {
-  color: #b3402a;
+  color: var(--coral);
   font-size: 13px;
   font-weight: 700;
 }

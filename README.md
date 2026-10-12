@@ -4,16 +4,12 @@ Separate wallet identities for different Solana apps. Fund them through Privacy 
 
 ## Install (2 minutes)
 
-The extension is already built. Nothing to install or build.
+The extension is already built. No terminal, no API key, no settings.
 
 1. Chrome → `chrome://extensions` → enable Developer mode → **Load unpacked** → pick the `dist` folder (the one with `manifest.json` directly inside).
-2. Start the funding page from this folder: `npm run companion` (or `node scripts/serve-companion.mjs`). It serves http://localhost:8765; keep it running while funding or returning.
-   - Alternative: upload `companion-dist/` to any static HTTPS host and put that URL in Alias → Settings → Funding page.
-3. Updating from an older version: if your current vault holds no funds, remove the old Alias extension first and load the new `dist`, so the first funding of each alias is fast (see "First funding" below).
+2. That's it. The funding page and the Solana RPC relay are hosted at https://alias.nikalacabidze111.workers.dev (see "Alias server" below), so Fund privately works straight away.
 
-### Solana RPC
-
-Some public RPC servers refuse requests from browser extensions (you may see `403 Access forbidden`). Alias tries a list of public servers and moves on automatically. For the most reliable demo, create a free RPC URL (for example at Helius) and paste it into Alias → Settings → "Your own RPC". It is tried first.
+Updating from an older version: if your current vault holds no funds, remove the old Alias extension first and load the new `dist`, so the first funding of each alias is fast (see below). Older installs that pointed at `localhost` switch to the hosted funding page automatically.
 
 ### First funding of an alias
 
@@ -61,8 +57,8 @@ If a leg stalls: nothing is ever resent automatically. Open History → the oper
 | command | what it does |
 | --- | --- |
 | `npm run build` | bundle extension → `dist/`, funding page → `companion-dist/` |
-| `npm test` | 49 unit tests: vault crypto, origin isolation, journal, signing policy, signature verification |
-| `npm run check:browser` | 50 checks in real Chromium against the packaged build (screenshots → `evidence/screenshots/`) |
+| `npm test` | 67 unit tests: vault crypto, origin isolation, journal, signing policy, signature verification |
+| `npm run check:browser` | 54 checks in real Chromium against the packaged build (screenshots → `evidence/screenshots/`) |
 | `npm run companion` | serve the funding page on http://localhost:8765 |
 
 ## What's verified vs. not

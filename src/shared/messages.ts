@@ -45,6 +45,7 @@ export interface AliasInfo {
   address: string;
   index: number; // derivation index
   avatarSeed: number;
+  emoji?: string; // chosen by the user; otherwise a default per kind
   createdAt: number;
 }
 
@@ -153,7 +154,8 @@ export type BgRequest =
   | { type: 'vault.revealMnemonic'; password: string }
   | { type: 'vault.importMnemonic'; password: string; mnemonic: string }
   | { type: 'alias.list' }
-  | { type: 'alias.create'; name: string; kind: AliasKind }
+  | { type: 'alias.create'; name: string; kind: AliasKind; emoji?: string }
+  | { type: 'alias.update'; id: string; name?: string; emoji?: string }
   | { type: 'alias.rename'; id: string; name: string }
   | { type: 'alias.balance'; id: string }
   | { type: 'settings.get' }

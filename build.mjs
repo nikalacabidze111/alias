@@ -6,6 +6,16 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = dirname(fileURLToPath(import.meta.url));
+
+// The hosted Alias server (funding page + RPC relay). Empty = local funding page
+// on http://localhost:8765 and public RPC servers only.
+const config = JSON.parse(readFileSync(resolve(root, 'alias.config.json'), 'utf8'));
+const aliasServer = String(config.server || '').replace(/\/+$/, '');
+if (aliasServer && !/^https:\/\/[^\s/]+(\/[^\s]*)?$/.test(aliasServer)) {
+  throw new Error('alias.config.json "server" must be an https:// URL');
+}
+const FONT_WEIGHTS = [400, 500, 600, 700, 800];
+const version = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8')).version;
 const dist = resolve(root, 'dist');
 const companionDist = resolve(root, 'companion-dist');
 
@@ -41,6 +51,7 @@ const common = {
   define: {
     global: 'globalThis',
     'process.env.NODE_ENV': '"production"',
+    __ALIAS_SERVER__: JSON.stringify(aliasServer),
   },
   alias: nodeShims,
   inject: [injectFile],
@@ -88,17 +99,17 @@ async function run() {
   // Shared theme + fonts.
   cpSync(resolve(root, 'src/theme.css'), resolve(dist, 'theme.css'));
   mkdirSync(resolve(dist, 'fonts'), { recursive: true });
-  for (const weight of [400, 600, 800]) {
+  for (const weight of FONT_WEIGHTS) {
     cpSync(
-      resolve(root, `node_modules/@fontsource/nunito/files/nunito-latin-${weight}-normal.woff2`),
-      resolve(dist, `fonts/nunito-${weight}.woff2`),
+      resolve(root, `node_modules/@fontsource/archivo/files/archivo-latin-${weight}-normal.woff2`),
+      resolve(dist, `fonts/archivo-${weight}.woff2`),
     );
   }
 
   // Manifest and icons.
   cpSync(resolve(root, 'src/manifest.json'), resolve(dist, 'manifest.json'));
   mkdirSync(resolve(dist, 'assets'), { recursive: true });
-  for (const size of [16, 48, 128]) {
+  for (const size of [16, 24, 32, 48, 128]) {
     cpSync(resolve(root, `src/assets/icon${size}.png`), resolve(dist, `assets/icon${size}.png`));
   }
 
@@ -123,15 +134,37 @@ async function run() {
   cpSync(resolve(root, 'companion/index.html'), resolve(companionDist, 'index.html'));
   cpSync(resolve(root, 'src/theme.css'), resolve(companionDist, 'theme.css'));
   mkdirSync(resolve(companionDist, 'fonts'), { recursive: true });
-  for (const weight of [400, 600, 800]) {
+  for (const weight of FONT_WEIGHTS) {
     cpSync(
-      resolve(root, `node_modules/@fontsource/nunito/files/nunito-latin-${weight}-normal.woff2`),
-      resolve(companionDist, `fonts/nunito-${weight}.woff2`),
+      resolve(root, `node_modules/@fontsource/archivo/files/archivo-latin-${weight}-normal.woff2`),
+      resolve(companionDist, `fonts/archivo-${weight}.woff2`),
     );
   }
 
+  // Alias server for Cloudflare Workers: the funding page embedded in one file
+  // plus the RPC relay. Paste hosting-dist/alias-worker.js into the dashboard.
+  const assets = {
+    '/index.html': { type: 'text/html; charset=utf-8', text: readFileSync(resolve(companionDist, 'index.html'), 'utf8') },
+    '/companion.js': { type: 'text/javascript; charset=utf-8', text: readFileSync(resolve(companionDist, 'companion.js'), 'utf8') },
+    '/theme.css': { type: 'text/css; charset=utf-8', text: readFileSync(resolve(companionDist, 'theme.css'), 'utf8') },
+  };
+  for (const weight of FONT_WEIGHTS) {
+    assets[`/fonts/archivo-${weight}.woff2`] = {
+      type: 'font/woff2',
+      b64: readFileSync(resolve(companionDist, `fonts/archivo-${weight}.woff2`)).toString('base64'),
+    };
+  }
+  const workerDist = resolve(root, 'hosting-dist');
+  rmSync(workerDist, { recursive: true, force: true });
+  mkdirSync(workerDist, { recursive: true });
+  const template = readFileSync(resolve(root, 'hosting/worker-template.js'), 'utf8');
+  writeFileSync(
+    resolve(workerDist, 'alias-worker.js'),
+    template.replace('__VERSION__', version).replace('const ASSETS = __ASSETS__;', `const ASSETS = ${JSON.stringify(assets)};`),
+  );
+
   rmSync(injectFile, { force: true });
-  console.log('Built dist/ (extension) and companion-dist/ (funding page).');
+  console.log(`Built dist/ (extension), companion-dist/ (funding page) and hosting-dist/alias-worker.js. Alias server: ${aliasServer || '(none: localhost funding page, public RPCs)'}`);
 }
 
 run().catch((e) => {

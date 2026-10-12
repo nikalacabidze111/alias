@@ -10,6 +10,8 @@ import {
 import type { ApprovalPayload } from '../background/approvals';
 import { PRIVACY_CASH_RELAYER, type AliasKind } from '../shared/constants';
 import { formatWhen, lamportsToSol, shortAddress, solToLamports, timeAgo } from '../shared/format';
+import { aliasTile, markSvg, siteTile, smallMarkSvg } from '../shared/brand';
+import { EMOJI_CHOICES, emojiFor, isSingleEmoji, KIND_EMOJI } from '../shared/emoji';
 
 const app = document.getElementById('app')!;
 
@@ -32,27 +34,15 @@ function val(selector: string): string {
   return (app.querySelector(selector) as HTMLInputElement | null)?.value ?? '';
 }
 
-function mascot(size = 84): string {
-  return `<svg width="${size}" height="${size}" viewBox="0 0 64 64" aria-hidden="true">
-    <circle cx="32" cy="33" r="21" fill="#FFE9B8"/>
-    <rect x="8" y="24.5" width="48" height="14" rx="7" fill="var(--lilac)"/>
-    <circle cx="23.5" cy="31.5" r="3.6" fill="var(--ink)"/>
-    <circle cx="40.5" cy="31.5" r="3.6" fill="var(--ink)"/>
-    <path d="M25 45c2.4 2.8 11.6 2.8 14 0" stroke="var(--ink)" stroke-width="2.8" stroke-linecap="round" fill="none"/>
-  </svg>`;
+function mark(size = 48): string {
+  return markSvg(size);
 }
 
-function avatar(seed: number, size = 34): string {
-  const hue = seed % 360;
-  const band = `hsl(${hue} 55% 75%)`;
-  const face = `hsl(${(hue + 40) % 360} 85% 88%)`;
-  return `<svg width="${size}" height="${size}" viewBox="0 0 64 64" aria-hidden="true">
-    <circle cx="32" cy="32" r="30" fill="${face}"/>
-    <rect x="6" y="23" width="52" height="15" rx="7.5" fill="${band}"/>
-    <circle cx="23" cy="30.5" r="3.6" fill="#211D17"/>
-    <circle cx="41" cy="30.5" r="3.6" fill="#211D17"/>
-  </svg>`;
+function avatar(alias: { name: string; avatarSeed: number; kind?: AliasKind; emoji?: string }, size = 32, onLilac = false): string {
+  return aliasTile(alias, size, onLilac);
 }
+
+const COPY_ICON = `<svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true"><rect x="5" y="5" width="9" height="9" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 3.5V3a1.5 1.5 0 0 0-1.5-1.5H3A1.5 1.5 0 0 0 1.5 3v6.5A1.5 1.5 0 0 0 3 11h.5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>`;
 
 function topbar(title: string, backRoute?: string): string {
   return `<div class="topbar">
@@ -119,6 +109,7 @@ async function route(): Promise<void> {
   if (hash === '/settings/phrase') return renderRevealPhrase();
   if (hash === '/history') return renderHistory();
   if (hash === '/aliases') return renderAliases();
+  if (hash === '/alias/edit') return renderEditAlias();
   if (hash.startsWith('/phrase-backup')) return renderPhraseBackup();
   if (aliasList.length === 0) return renderCreateAlias(true);
   return renderHome();
@@ -129,12 +120,15 @@ window.addEventListener('hashchange', () => void route());
 // ---------- onboarding ----------
 function renderWelcome(): void {
   screen(`
-    <div class="grow" style="display:flex;flex-direction:column;justify-content:center">
-      <div class="hero">
-        ${mascot(96)}
-        <h1>Alias</h1>
-        <p>Separate wallet identities for different apps. Your main wallet stays separate.</p>
-      </div>
+    <div class="intro grow">
+      ${mark(52)}
+      <h1 class="display">One wallet per app.<br />No link back to you.</h1>
+      <p class="lede">Alias gives every site its own address and funds it through Privacy Cash, so your main wallet stays separate.</p>
+      <ul class="facts">
+        <li><b>Separate aliases</b><span>For trading, NFTs, or one per site</span></li>
+        <li><b>Private funding</b><span>No transaction links your wallets</span></li>
+        <li><b>One recovery phrase</b><span>12 words restore every alias</span></li>
+      </ul>
     </div>
     <div class="bottom">
       <button class="btn btn-primary" data-nav="/onboard/password">Create my vault</button>
@@ -223,13 +217,12 @@ function renderOnboardImport(): void {
 
 function renderUnlock(nextHash: string): void {
   screen(`
-    <div class="grow" style="display:flex;flex-direction:column;justify-content:center">
-      <div class="hero">
-        ${mascot(84)}
-        <h1>Welcome back</h1>
-      </div>
-      <div class="stack" style="margin-top:14px">
-        <input id="pw" class="field" type="password" placeholder="Password" autocomplete="current-password" />
+    <div class="intro grow">
+      ${mark(52)}
+      <h1 class="display">Welcome back</h1>
+      <p class="lede">Unlock to use your aliases. Your password never leaves this computer.</p>
+      <div class="stack" style="margin-top:6px">
+        <input id="pw" class="field" type="password" placeholder="Password" autocomplete="current-password" aria-label="Password" />
         <div class="error-text"></div>
       </div>
     </div>
@@ -254,6 +247,39 @@ function renderUnlock(nextHash: string): void {
 }
 
 // ---------- home ----------
+const ICONS = {
+  home: `<svg width="19" height="19" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 9.2 10 3.5l7 5.7V16a1 1 0 0 1-1 1h-3.6v-4.6H7.6V17H4a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>`,
+  activity: `<svg width="19" height="19" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M10 6.2V10l2.6 1.8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  settings: `<svg width="19" height="19" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="2.6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M10 2.5v2M10 15.5v2M17.5 10h-2M4.5 10h-2M15.3 4.7l-1.4 1.4M6.1 13.9l-1.4 1.4M15.3 15.3l-1.4-1.4M6.1 6.1 4.7 4.7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>`,
+  chevron: `<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5 6 7.5l3-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  in: `<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5v10M3.8 8.6 8 12.8l4.2-4.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  out: `<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 13.5v-10M3.8 7.4 8 3.2l4.2 4.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+};
+
+function navBar(active: 'home' | 'activity' | 'settings'): string {
+  const item = (key: 'home' | 'activity' | 'settings', label: string, route: string) =>
+    `<button class="${active === key ? 'active' : ''}" ${active === key ? 'aria-current="page"' : `data-nav="${route}"`}>${ICONS[key]}<span>${label}</span></button>`;
+  return `<nav class="nav" aria-label="Main">${item('home', 'Home', '/')}${item('activity', 'Activity', '/history')}${item('settings', 'Settings', '/settings')}</nav>`;
+}
+
+function opStatus(op: OperationRecord): { label: string; cls: string } {
+  if (op.step === 'done') return { label: 'Done', cls: 'chip-mint' };
+  if (op.step === 'failed') return { label: 'Failed', cls: 'chip-coral' };
+  if (op.step === 'deposit-confirmed' && op.payAfter && op.payAfter > Date.now()) return { label: 'Scheduled', cls: 'chip-lilac' };
+  if (op.step === 'unknown') return { label: 'Check status', cls: 'chip-lilac' };
+  return { label: 'In progress', cls: 'chip-lilac' };
+}
+
+function activityRow(op: OperationRecord, aliasName?: string): string {
+  const st = opStatus(op);
+  const fund = op.kind === 'fund';
+  return `<button class="act-row" data-op="${op.id}">
+    <span class="act-icon ${fund ? 'in' : 'out'}">${fund ? ICONS.in : ICONS.out}</span>
+    <span class="act-meta"><span class="one">${fund ? 'Funded privately' : 'Returned privately'}</span><span class="two num">${aliasName ? `${esc(aliasName)} · ` : ''}${lamportsToSol(op.amountLamports)} SOL · ${timeAgo(op.createdAt)}</span></span>
+    <span class="chip ${st.cls}">${st.label}</span>
+  </button>`;
+}
+
 async function renderHome(): Promise<void> {
   const alias = currentAlias();
   if (!alias) return renderCreateAlias(true);
@@ -263,63 +289,51 @@ async function renderHome(): Promise<void> {
   const net = settings!.network;
   const netChip =
     net === 'mainnet-beta'
-      ? `<span class="chip chip-coral">Mainnet</span>`
-      : `<span class="chip chip-amber">Devnet</span>`;
+      ? `<span class="chip chip-coral" title="Real funds">Mainnet</span>`
+      : `<span class="chip chip-lilac">Devnet</span>`;
 
   screen(`
     <div class="topbar">
-      <span class="title">Alias</span>
+      <span class="brandline">${smallMarkSvg(22)}<span>Alias</span></span>
       ${netChip}
     </div>
-    <div class="stack">
+    <div class="home">
       <div class="alias-card">
-        <div class="row">
-          ${avatar(alias.avatarSeed)}
-          <div style="flex:1;min-width:0">
-            <div class="alias-name">${esc(alias.name)}</div>
-            <div id="site-chip"></div>
+        <div class="card-head">
+          <button class="avatar-btn" id="edit-alias" title="Change emoji and name" aria-label="Change emoji and name">${avatar(alias, 40, true)}</button>
+          <div class="head-text">
+            <button class="switcher" data-nav="/aliases" aria-label="Switch alias"><span class="alias-name">${esc(alias.name)}</span>${ICONS.chevron}</button>
+            <div id="site-chip" class="site-line"></div>
           </div>
         </div>
-        <div class="alias-balance mono" id="balance">…</div>
-        <div class="row" style="justify-content:space-between">
-          <button class="addr" id="copy-addr" title="${esc(alias.address)}">${shortAddress(alias.address, 5, 5)} ⧉</button>
-          <span class="small" style="color:var(--lilac-ink);font-weight:700">No direct public funding link</span>
+        <div class="alias-balance num" id="balance">…</div>
+        <div class="alias-foot">
+          <button class="addr num" id="copy-addr" title="${esc(alias.address)}" aria-label="Copy alias address"><span id="addr-text">${shortAddress(alias.address, 5, 5)}</span>${COPY_ICON}</button>
+          <span class="alias-note" id="fund-status">&nbsp;</span>
         </div>
       </div>
       <div class="actions">
-        <button class="btn btn-mint" data-nav="/fund">Fund privately</button>
-        <button class="btn btn-soft" data-nav="/return">Return privately</button>
+        <button class="btn btn-primary" data-nav="/fund">Fund privately</button>
+        <button class="btn btn-outline" data-nav="/return">Return privately</button>
       </div>
       <div id="pending"></div>
-      <div class="alias-switch" id="switch">
-        ${pillAliases(alias)
-          .map(
-            (a) =>
-              `<button class="alias-pill${a.id === alias.id ? ' active' : ''}" data-alias="${a.id}" title="${esc(a.name)}">${avatar(a.avatarSeed, 18)} <span class="pill-name">${esc(a.name)}</span></button>`,
-          )
-          .join('')}
-        ${aliasList.length > PILL_LIMIT ? `<button class="alias-pill" data-nav="/aliases">All ${aliasList.length}</button>` : ''}
-        <button class="alias-pill" data-nav="/create-alias">＋ New</button>
-      </div>
+      <section class="home-activity" aria-label="Activity">
+        <div class="section-head"><span>Activity</span><button class="link-quiet" data-nav="/history">See all</button></div>
+        <div id="activity"></div>
+      </section>
     </div>
-    <div class="bottom">
-      <div class="nav">
-        <button class="active">Home</button>
-        <button data-nav="/history">History</button>
-        <button data-nav="/settings">Settings</button>
-      </div>
-    </div>
+    ${navBar('home')}
   `);
   wireNav();
-  on('[data-alias]', 'click', (_e, el) => {
-    selectedAliasId = el.dataset.alias!;
-    localStorage.setItem('alias.selected', selectedAliasId);
-    void renderHome();
+  on('#edit-alias', 'click', () => {
+    location.hash = '/alias/edit';
   });
-  on('#copy-addr', 'click', async (_e, el) => {
+  on('#copy-addr', 'click', async () => {
     await navigator.clipboard.writeText(alias.address);
-    el.textContent = 'Copied!';
-    setTimeout(() => (el.innerHTML = `${shortAddress(alias.address, 5, 5)} ⧉`), 900);
+    const t = app.querySelector('#addr-text');
+    if (!t) return;
+    t.textContent = 'Copied';
+    setTimeout(() => (t.textContent = shortAddress(alias.address, 5, 5)), 900);
   });
 
   // Real balance.
@@ -333,8 +347,7 @@ async function renderHome(): Promise<void> {
       if (b) b.textContent = 'Balance unavailable';
     });
 
-  // A deposit that is in the pool but not paid out yet (scheduled, or a
-  // payout that was interrupted). One card, one action.
+  // Operations: pending payout card, funding status line, and activity list.
   bg<OperationRecord[]>({ type: 'ops.list' })
     .then((ops) => {
       const now = Date.now();
@@ -343,28 +356,58 @@ async function renderHome(): Promise<void> {
       if (ready.length === 0) void chrome.action?.setBadgeText({ text: '' }).catch(() => undefined);
       const op = ready[0] ?? waiting[0];
       const slot = app.querySelector('#pending');
-      if (!op || !slot) return;
-      const isReady = !op.payAfter || op.payAfter <= now;
-      const payee = op.kind === 'fund' ? (aliasList.find((a) => a.id === op.aliasId)?.name ?? 'your alias') : 'your main wallet';
-      slot.innerHTML = `<div class="card pending${isReady ? ' ready' : ''}">
-        <div class="meta">
-          <div class="one">${lamportsToSol(op.amountLamports)} SOL ${isReady ? 'ready in the pool' : 'waiting in the pool'}</div>
-          <div class="two">${isReady ? `Next: pay ${esc(payee)}` : `Pays ${esc(payee)} ${esc(formatWhen(op.payAfter!))}`}</div>
-        </div>
-        <button class="btn-mini" id="pay-op">${isReady ? 'Pay' : 'Pay now'}</button>
-      </div>`;
-      on('#pay-op', 'click', async () => {
-        try {
-          await bg({ type: 'ops.open', id: op.id, payNow: true });
-          window.close();
-        } catch {
-          // The card stays; History can reopen it too.
-        }
+      if (op && slot) {
+        const isReady = !op.payAfter || op.payAfter <= now;
+        const payee = op.kind === 'fund' ? (aliasList.find((a) => a.id === op.aliasId)?.name ?? 'your alias') : 'your main wallet';
+        slot.innerHTML = `<div class="card pending${isReady ? ' ready' : ''}">
+          <div class="meta">
+            <div class="one">${lamportsToSol(op.amountLamports)} SOL ${isReady ? 'ready in the pool' : 'waiting in the pool'}</div>
+            <div class="two">${isReady ? `Next: pay ${esc(payee)}` : `Pays ${esc(payee)} ${esc(formatWhen(op.payAfter!))}`}</div>
+          </div>
+          <button class="btn-mini" id="pay-op">${isReady ? 'Pay' : 'Pay now'}</button>
+        </div>`;
+        on('#pay-op', 'click', async () => {
+          try {
+            await bg({ type: 'ops.open', id: op.id, payNow: true });
+            window.close();
+          } catch {
+            // The card stays; Activity can reopen it too.
+          }
+        });
+      }
+
+      const mine = ops.filter((o) => o.aliasId === alias.id);
+      const status = app.querySelector('#fund-status');
+      if (status) {
+        const funded = mine.some((o) => o.kind === 'fund' && o.step === 'done');
+        const funding = mine.some((o) => o.kind === 'fund' && !['done', 'failed'].includes(o.step));
+        status.textContent = funded
+          ? 'Funded privately · no direct link to your main wallet'
+          : funding
+            ? 'Private funding in progress'
+            : 'Not funded yet';
+      }
+
+      const list = app.querySelector('#activity');
+      if (!list) return;
+      if (mine.length === 0) {
+        list.innerHTML = `<ol class="getting-started">
+          <li><b>Fund this alias</b><span>from your main wallet, privately</span></li>
+          <li><b>Connect it</b><span>on a site like Jupiter</span></li>
+          <li><b>Return funds</b><span>the same private way</span></li>
+        </ol>`;
+        return;
+      }
+      const max = op ? 2 : 3;
+      list.innerHTML = mine.slice(0, max).map((o) => activityRow(o)).join('');
+      on('[data-op]', 'click', async (_e, el) => {
+        await bg({ type: 'ops.open', id: el.dataset.op!, payNow: false }).catch(() => undefined);
+        window.close();
       });
     })
     .catch(() => undefined);
 
-  // Connected-site chip for the active tab.
+  // Connected-site line for the active tab.
   try {
     const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
     if (tab?.url?.startsWith('http')) {
@@ -374,21 +417,72 @@ async function renderHome(): Promise<void> {
       const slot = app.querySelector('#site-chip');
       if (slot && grant) {
         const who = aliasList.find((a) => a.id === grant.aliasId);
-        slot.innerHTML = `<span class="chip chip-mint">Connected to ${esc(new URL(origin).hostname)}${
+        slot.innerHTML = `<span class="conn-dot" aria-hidden="true"></span>Connected to ${esc(new URL(origin).hostname)}${
           who && who.id !== alias.id ? ` as ${esc(who.name)}` : ''
-        }</span>`;
+        }`;
       }
     }
   } catch {
-    // No tab access; skip the chip.
+    // No tab access; skip the line.
   }
 }
 
-// Home shows at most PILL_LIMIT aliases: the current one plus the newest.
-const PILL_LIMIT = 3;
-function pillAliases(current: AliasInfo): AliasInfo[] {
-  const others = aliasList.filter((a) => a.id !== current.id).sort((a, b) => b.createdAt - a.createdAt);
-  return [current, ...others.slice(0, PILL_LIMIT - 1)];
+// ---------- edit alias: emoji + name ----------
+function renderEditAlias(): void {
+  const alias = currentAlias();
+  if (!alias) return void (location.hash = '/');
+  let chosen = emojiFor(alias) ?? '';
+  screen(`
+    ${topbar('Edit alias', '/')}
+    <div class="stack grow">
+      <div class="edit-head">
+        <span id="preview">${avatar(alias, 56)}</span>
+        <input id="name" class="field" value="${esc(alias.name)}" maxlength="40" aria-label="Alias name" />
+      </div>
+      <div class="field-label" style="margin-top:4px">Pick an emoji</div>
+      <div class="emoji-grid" role="group" aria-label="Emoji">
+        ${EMOJI_CHOICES.map((e) => `<button class="emoji-opt${e === chosen ? ' active' : ''}" data-emoji="${e}" aria-label="${e}">${e}</button>`).join('')}
+      </div>
+      <label class="field-label">Or type any emoji<input id="custom" class="field" placeholder="For example 🐢" maxlength="16" /></label>
+      <div class="error-text"></div>
+    </div>
+    <div class="bottom">
+      <button class="btn btn-primary" id="save">Save</button>
+    </div>
+  `);
+  wireNav();
+  const paint = () => {
+    const preview = app.querySelector('#preview');
+    if (preview) preview.innerHTML = avatar({ ...alias, emoji: chosen || alias.emoji }, 56);
+    app.querySelectorAll<HTMLElement>('.emoji-opt').forEach((b) => b.classList.toggle('active', b.dataset.emoji === chosen));
+  };
+  on('.emoji-opt', 'click', (_e, el) => {
+    chosen = el.dataset.emoji!;
+    (app.querySelector('#custom') as HTMLInputElement).value = '';
+    showError('');
+    paint();
+  });
+  on('#custom', 'input', (_e, el) => {
+    const v = (el as HTMLInputElement).value.trim();
+    if (!v) return;
+    if (isSingleEmoji(v)) {
+      chosen = v;
+      showError('');
+      paint();
+    } else {
+      showError('Type a single emoji');
+    }
+  });
+  on('#save', 'click', async () => {
+    try {
+      const updated = await bg<AliasInfo>({ type: 'alias.update', id: alias.id, name: val('#name'), emoji: chosen || undefined });
+      const i = aliasList.findIndex((a) => a.id === updated.id);
+      if (i >= 0) aliasList[i] = updated;
+      location.hash = '/';
+    } catch (e) {
+      showError((e as Error).message);
+    }
+  });
 }
 
 // ---------- all aliases (paginated, no scrolling) ----------
@@ -404,19 +498,19 @@ function renderAliases(page = 0): void {
       ${slice
         .map(
           (a) => `<button class="card list-item" data-alias="${a.id}" style="text-align:left;${a.id === current?.id ? 'border-color:var(--lilac);background:var(--lilac-soft)' : ''}">
-            ${avatar(a.avatarSeed, 28)}
-            <div class="meta"><div class="one">${esc(a.name)}</div><div class="two mono" title="${esc(a.address)}">${shortAddress(a.address, 5, 5)}</div></div>
+            ${avatar(a, 30)}
+            <div class="meta"><div class="one">${esc(a.name)}</div><div class="two num" title="${esc(a.address)}">${shortAddress(a.address, 5, 5)}</div></div>
           </button>`,
         )
         .join('')}
       ${
         pages > 1
-          ? `<div class="pager"><button class="link-btn" id="prev" ${page === 0 ? 'disabled' : ''}>Previous</button><span>${page + 1} / ${pages}</span><button class="link-btn" id="next" ${page === pages - 1 ? 'disabled' : ''}>Next</button></div>`
+          ? `<div class="pager"><button class="icon-btn" id="prev" aria-label="Previous page" ${page === 0 ? 'disabled' : ''}>‹</button><span class="num">${page + 1} / ${pages}</span><button class="icon-btn" id="next" aria-label="Next page" ${page === pages - 1 ? 'disabled' : ''}>›</button></div>`
           : ''
       }
     </div>
     <div class="bottom">
-      <button class="btn btn-soft" data-nav="/create-alias">＋ New alias</button>
+      <button class="btn btn-outline" data-nav="/create-alias">New alias</button>
     </div>
   `);
   wireNav();
@@ -437,10 +531,10 @@ function renderCreateAlias(first = false): void {
     <div class="stack">
       <p class="muted small">${first ? 'An alias is a separate wallet identity. Start with one for trading.' : 'Each alias is a separate identity with its own address.'}</p>
       <div class="kind-grid" id="kinds">
-        <button class="kind-option active" data-kind="trading"><strong>Trading</strong><span>DEXes and swaps</span></button>
-        <button class="kind-option" data-kind="collecting"><strong>Collecting</strong><span>NFT apps</span></button>
-        <button class="kind-option" data-kind="everyday"><strong>Everyday</strong><span>General use</span></button>
-        <button class="kind-option" data-kind="fresh"><strong>Fresh</strong><span>One site only</span></button>
+        <button class="kind-option active" data-kind="trading"><span class="tile tile-emoji k-tile">${KIND_EMOJI.trading}</span><strong>Trading</strong><span>DEXes and swaps</span></button>
+        <button class="kind-option" data-kind="collecting"><span class="tile tile-emoji k-tile">${KIND_EMOJI.collecting}</span><strong>Collecting</strong><span>NFT apps</span></button>
+        <button class="kind-option" data-kind="everyday"><span class="tile tile-emoji k-tile">${KIND_EMOJI.everyday}</span><strong>Everyday</strong><span>General use</span></button>
+        <button class="kind-option" data-kind="fresh"><span class="tile tile-emoji k-tile">${KIND_EMOJI.fresh}</span><strong>Fresh</strong><span>One site only</span></button>
       </div>
       <input id="name" class="field" placeholder="Name (optional)" />
       <div class="error-text"></div>
@@ -567,7 +661,7 @@ async function renderFund(): Promise<void> {
   screen(`
     ${topbar('Fund privately', '/')}
     <div class="stack grow">
-      <div class="card site-banner">${avatar(alias.avatarSeed)}<div><div style="font-weight:800">${esc(alias.name)}</div><div class="small muted">receives through Privacy Cash</div></div></div>
+      <div class="card site-banner">${avatar(alias)}<div><div style="font-weight:800">${esc(alias.name)}</div><div class="small muted">receives through Privacy Cash</div></div></div>
       ${
         gate
           ? `<div class="notice amber">${esc(gate)}</div>`
@@ -633,10 +727,8 @@ async function renderFund(): Promise<void> {
         delayMinutes: getDelay(),
       });
       screen(`
-        <div class="grow" style="display:flex;align-items:center;justify-content:center">
-          <div class="hero">${mascot(84)}<h1>Continue in the Alias window</h1><p>The funding steps run in the small window that just opened.</p></div>
-        </div>
-        <div class="bottom"><button class="btn btn-soft" data-nav="/">Done</button></div>`);
+        <div class="intro grow">${mark(52)}<h1 class="display">Continue in the Alias window</h1><p class="lede">The funding steps run in the small window that just opened.</p></div>
+        <div class="bottom"><button class="btn btn-primary" data-nav="/">Done</button></div>`);
       wireNav();
     } catch (e) {
       showError((e as Error).message);
@@ -666,7 +758,7 @@ async function renderReturn(): Promise<void> {
   screen(`
     ${topbar('Return privately', '/')}
     <div class="stack grow">
-      <div class="card site-banner">${avatar(alias.avatarSeed)}<div><div style="font-weight:800">${esc(alias.name)}</div><div class="small muted">has ${lamportsToSol(balance)} SOL</div></div></div>
+      <div class="card site-banner">${avatar(alias)}<div><div style="font-weight:800">${esc(alias.name)}</div><div class="small muted">has ${lamportsToSol(balance)} SOL</div></div></div>
       ${
         gate
           ? `<div class="notice amber">${esc(gate)}</div>`
@@ -748,10 +840,8 @@ async function renderReturn(): Promise<void> {
         delayMinutes: getDelay(),
       });
       screen(`
-        <div class="grow" style="display:flex;align-items:center;justify-content:center">
-          <div class="hero">${mascot(84)}<h1>Continue in the Alias window</h1><p>The return steps run in the small window that just opened.</p></div>
-        </div>
-        <div class="bottom"><button class="btn btn-soft" data-nav="/">Done</button></div>`);
+        <div class="intro grow">${mark(52)}<h1 class="display">Continue in the Alias window</h1><p class="lede">The return steps run in the small window that just opened.</p></div>
+        <div class="bottom"><button class="btn btn-primary" data-nav="/">Done</button></div>`);
       wireNav();
     } catch (e) {
       showError((e as Error).message);
@@ -762,49 +852,25 @@ async function renderReturn(): Promise<void> {
 // ---------- history ----------
 async function renderHistory(): Promise<void> {
   const ops = await bg<OperationRecord[]>({ type: 'ops.list' });
-  const stepLabel: Record<string, string> = {
-    created: 'Started',
-    'awaiting-wallet': 'Waiting for main wallet',
-    'proving-deposit': 'Preparing deposit',
-    'awaiting-signature': 'Waiting for signature',
-    'deposit-submitted': 'Deposit pending',
-    'deposit-confirmed': 'Deposit confirmed',
-    'proving-withdraw': 'Preparing withdrawal',
-    'withdraw-submitted': 'Withdrawal pending',
-    'withdraw-confirmed': 'Withdrawal confirmed',
-    done: 'Done',
-    failed: 'Failed',
-    unknown: 'Status unknown',
-  };
   screen(`
-    ${topbar('History', '/')}
-    <div class="list grow">
+    ${topbar('Activity', '/')}
+    <div class="grow history">
       ${
         ops.length === 0
-          ? `<p class="muted" style="text-align:center;margin-top:40px">No private operations yet.</p>`
-          : ops
-              .slice(0, 20)
-              .map((op) => {
-                const alias = aliasList.find((a) => a.id === op.aliasId);
-                const cls = op.step === 'done' ? 'chip-mint' : op.step === 'failed' ? 'chip-coral' : 'chip-amber';
-                return `<button class="card list-item" data-op="${op.id}" style="text-align:left">
-                  <div class="meta">
-                    <div class="one">${op.kind === 'fund' ? 'Fund' : 'Return'} · ${lamportsToSol(op.amountLamports)} SOL</div>
-                    <div class="two">${esc(alias?.name ?? 'Alias')} · ${timeAgo(op.createdAt)}</div>
-                  </div>
-                  <span class="chip ${cls}">${stepLabel[op.step] ?? op.step}</span>
-                </button>`;
-              })
-              .join('')
+          ? `<p class="muted small" style="margin-top:8px">No activity yet. Fund an alias privately and it shows up here.</p>`
+          : `<div id="activity">${ops
+              .slice(0, 30)
+              .map((op) => activityRow(op, aliasList.find((a) => a.id === op.aliasId)?.name ?? 'Alias'))
+              .join('')}</div>`
       }
     </div>
     <div class="bottom">
-      <button class="btn btn-ghost" id="manager">Open full history & recovery</button>
+      <button class="btn btn-outline" id="manager">Full history and recovery</button>
     </div>
   `);
   wireNav();
-  on('[data-op]', 'click', (_e, el) => {
-    window.open(chrome.runtime.getURL(`ops/ops.html#${el.dataset.op}`), '_blank', 'popup,width=420,height=680');
+  on('[data-op]', 'click', async (_e, el) => {
+    await bg({ type: 'ops.open', id: el.dataset.op!, payNow: false }).catch(() => undefined);
   });
   on('#manager', 'click', () => {
     void chrome.tabs.create({ url: chrome.runtime.getURL('manager/manager.html') });
@@ -814,37 +880,35 @@ async function renderHistory(): Promise<void> {
 // ---------- settings ----------
 async function renderSettings(): Promise<void> {
   const s = settings!;
+  const advancedOpen = Boolean(s.customRpc);
   screen(`
     ${topbar('Settings', '/')}
-    <div class="stack grow" style="overflow-y:auto">
-      <div class="seg" id="net">
+    <div class="stack grow settings">
+      <div class="seg" id="net" role="group" aria-label="Network">
         <button data-net="devnet" class="${s.network === 'devnet' ? 'active' : ''}">Devnet</button>
         <button data-net="mainnet-beta" class="${s.network === 'mainnet-beta' ? 'active' : ''}">Mainnet</button>
       </div>
-      ${s.mainnetEnabled ? '' : `<div class="notice amber">Mainnet is off. Real funds need explicit consent. <a href="#/settings/mainnet">Enable mainnet</a></div>`}
-      <div class="card toggle-row">
-        <div><div class="label">Per-operation limit</div><div class="sub">Private fund / return</div></div>
-        <input id="opLimit" class="field" style="width:84px;padding:7px 10px" value="${s.perOperationSol}" inputmode="decimal" />
+      ${s.mainnetEnabled ? '' : `<p class="small muted">Mainnet is off until you agree to use real funds. <a href="#/settings/mainnet">Enable mainnet</a></p>`}
+      <div class="card group">
+        <label class="row-field"><span class="rf-text"><b>Per-transaction limit</b><small>Spending on sites (mainnet)</small></span><span class="unit-input"><input id="txLimit" value="${s.perTransactionSol}" inputmode="decimal" aria-label="Per-transaction limit in SOL" /><em>SOL</em></span></label>
+        <label class="row-field"><span class="rf-text"><b>Per-transfer limit</b><small>Fund and return privately</small></span><span class="unit-input"><input id="opLimit" value="${s.perOperationSol}" inputmode="decimal" aria-label="Per-transfer limit in SOL" /><em>SOL</em></span></label>
       </div>
-      <div class="card toggle-row">
-        <div><div class="label">Per-transaction limit</div><div class="sub">Dapp spending (mainnet)</div></div>
-        <input id="txLimit" class="field" style="width:84px;padding:7px 10px" value="${s.perTransactionSol}" inputmode="decimal" />
+      <div class="card group">
+        <button class="row-link" data-nav="/settings/sites"><span>Connected sites</span><span class="chev" aria-hidden="true">›</span></button>
+        <button class="row-link" data-nav="/settings/phrase"><span>Recovery phrase</span><span class="chev" aria-hidden="true">›</span></button>
+        <button class="row-link" id="lock"><span>Lock Alias</span><span class="chev" aria-hidden="true">›</span></button>
       </div>
-      <div class="card toggle-row">
-        <div><div class="label">Funding page</div><div class="sub">Where your main wallet signs</div></div>
-      </div>
-      <input id="companion" class="field" value="${esc(s.companionUrl)}" />
-      <div class="card toggle-row">
-        <div><div class="label">Your own RPC (optional)</div><div class="sub">Tried first, e.g. a free Helius URL. Public servers are the fallback.</div></div>
-      </div>
-      <input id="rpc" class="field" placeholder="https://…" value="${esc(s.customRpc ?? '')}" />
-      <button class="btn btn-soft" data-nav="/settings/sites">Connected sites</button>
-      <button class="btn btn-soft" data-nav="/settings/phrase">Show recovery phrase</button>
+      <details class="card group adv"${advancedOpen ? ' open' : ''}>
+        <summary class="row-link"><span>Advanced</span><span class="chev" aria-hidden="true">›</span></summary>
+        <div class="adv-body">
+          <label class="field-label">Funding page<input id="companion" class="field" value="${esc(s.companionUrl)}" /></label>
+          <label class="field-label">Your own RPC (optional, tried first)<input id="rpc" class="field" placeholder="https://…" value="${esc(s.customRpc ?? '')}" /></label>
+        </div>
+      </details>
       <div class="error-text"></div>
     </div>
     <div class="bottom">
       <button class="btn btn-primary" id="save">Save</button>
-      <button class="btn btn-ghost" id="lock">Lock Alias</button>
     </div>
   `);
   wireNav();
@@ -889,17 +953,16 @@ function renderMainnetConsent(): void {
     ${topbar('Enable mainnet', '/settings')}
     <div class="stack grow">
       <div class="notice coral">Mainnet uses real SOL. A mistake can cost real money.</div>
-      <div class="card" style="padding:12px 14px">
-        <div class="kv"><span class="k">Every transaction</span><span class="v">asks you first</span></div>
-        <div class="kv"><span class="k">Spending limits</span><span class="v">${settings!.perTransactionSol} SOL / tx, ${settings!.perOperationSol} SOL / operation</span></div>
-        <div class="kv"><span class="k">Address separation</span><span class="v">is not anonymity</span></div>
+      <div class="card rows">
+        <div class="row-item"><div class="k">Every transaction</div><div class="v">Asks you first</div></div>
+        <div class="row-item"><div class="k">Spending limits</div><div class="v num">${settings!.perTransactionSol} SOL per transaction · ${settings!.perOperationSol} SOL per private transfer</div></div>
+        <div class="row-item"><div class="k">Privacy</div><div class="v">Separate addresses, not anonymity. Timing, amounts and off-chain data can still link activity.</div></div>
       </div>
-      <p class="small muted">Timing, amounts and off-chain data can still allow correlation. Keep amounts small.</p>
       <label class="check-row"><input type="checkbox" id="agree" /> I understand this uses real funds and I keep my own limits in mind.</label>
       <div class="error-text"></div>
     </div>
     <div class="bottom">
-      <button class="btn btn-coral" id="enable">Enable mainnet</button>
+      <button class="btn btn-primary" id="enable">Enable mainnet</button>
     </div>
   `);
   wireNav();
@@ -976,7 +1039,7 @@ async function renderApproval(requestId: string): Promise<void> {
   try {
     payload = await bg<ApprovalPayload>({ type: 'approval.get', requestId });
   } catch {
-    screen(`<div class="grow" style="display:flex;align-items:center;justify-content:center"><div class="hero">${mascot(72)}<h1>Nothing to approve</h1><p>This request already finished. You can close this window.</p></div></div>`);
+    screen(`<div class="intro grow">${mark(52)}<h1 class="display">Nothing to approve</h1><p class="lede">This request already finished. You can close this window.</p></div>`);
     return;
   }
   if (payload.kind === 'connect') return renderConnectApproval(requestId, payload.request);
@@ -1023,7 +1086,7 @@ async function renderConnectApproval(
       ${topbar('Connection request')}
       <div class="stack grow">
         <div class="card site-banner">
-          ${mascot(40)}
+          ${siteTile(hostOf(request.origin), 40)}
           <div style="min-width:0">
             <div class="origin">${esc(request.siteLabel ?? hostOf(request.origin))}</div>
             <div class="small muted" style="word-break:break-all">${esc(request.origin)}</div>
@@ -1037,7 +1100,7 @@ async function renderConnectApproval(
             ? `<div class="list" style="max-height:200px">${aliasList
                 .map(
                   (a) => `<button class="card list-item${a.id === chosen ? '' : ''}" data-pick="${a.id}" style="text-align:left;${a.id === chosen ? 'border-color:var(--lilac);background:var(--lilac-soft)' : ''}">
-                    ${avatar(a.avatarSeed, 28)}
+                    ${avatar(a, 28)}
                     <div class="meta"><div class="one">${esc(a.name)}</div><div class="two">${shortAddress(a.address, 5, 5)}</div></div>
                   </button>`,
                 )
@@ -1045,8 +1108,8 @@ async function renderConnectApproval(
                 <button class="card list-item" data-newalias style="text-align:left;${chosen === null ? 'border-color:var(--lilac);background:var(--lilac-soft)' : ''}"><div class="meta"><div class="one">＋ ${esc(newName)}</div><div class="two">New, only for this site</div></div></button>
               </div>`
             : current
-              ? `<div class="card list-item">${avatar(current.avatarSeed, 30)}<div class="meta"><div class="one">${esc(current.name)}</div><div class="two mono">${shortAddress(current.address, 6, 6)}</div></div></div>`
-              : `<div class="card list-item">${mascot(30)}<div class="meta"><div class="one">${esc(newName)}</div><div class="two">New address, created when you approve</div></div></div>`
+              ? `<div class="card list-item">${avatar(current, 30)}<div class="meta"><div class="one">${esc(current.name)}</div><div class="two mono">${shortAddress(current.address, 6, 6)}</div></div></div>`
+              : `<div class="card list-item">${avatar({ name: newName, avatarSeed: 2, kind: newKind }, 30)}<div class="meta"><div class="one">${esc(newName)}</div><div class="two">New address, created when you approve</div></div></div>`
         }
         <p class="small muted">The site only sees this alias address. Your main wallet stays separate.</p>
         <div class="error-text"></div>
@@ -1092,7 +1155,7 @@ async function renderTxApproval(requestId: string, request: { origin: string; al
   screen(`
     ${topbar('Approve transaction')}
     <div class="stack grow">
-      <div class="card site-banner">${avatar(alias.avatarSeed, 32)}
+      <div class="card site-banner">${avatar(alias, 32)}
         <div style="min-width:0"><div class="origin">${esc(hostOf(request.origin))}</div>
         <div class="small muted">asks ${esc(alias.name)} to sign${request.mode === 'signAndSend' ? ' and send' : ''}</div></div>
       </div>
@@ -1153,7 +1216,7 @@ async function renderMsgApproval(requestId: string, request: { origin: string; a
   screen(`
     ${topbar('Sign a message')}
     <div class="stack grow">
-      <div class="card site-banner">${avatar(alias.avatarSeed, 32)}
+      <div class="card site-banner">${avatar(alias, 32)}
         <div style="min-width:0"><div class="origin">${esc(hostOf(request.origin))}</div><div class="small muted">asks ${esc(alias.name)} to sign a message</div></div>
       </div>
       <div class="card" style="padding:12px;max-height:200px;overflow:auto;font-size:13px;white-space:pre-wrap;word-break:break-word">${esc(text)}</div>

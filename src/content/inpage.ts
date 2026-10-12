@@ -3,6 +3,7 @@
 // extension through the relay; no keys ever exist in this world.
 import { registerWallet } from '@wallet-standard/wallet';
 import bs58 from 'bs58';
+import { markSvg } from '../shared/brand';
 import {
   CHANNEL_FROM_RELAY,
   CHANNEL_TO_RELAY,
@@ -57,8 +58,8 @@ function request<T>(method: PageRequest['method'], params?: unknown): Promise<T>
 };
 
 // ---------- Wallet Standard ----------
-const ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#F7F1E5"/><circle cx="32" cy="33" r="19" fill="#FFE9B8"/><rect x="10" y="25" width="44" height="13" rx="6.5" fill="#B9A3F0"/><circle cx="24" cy="31.5" r="3.4" fill="#211D17"/><circle cx="40" cy="31.5" r="3.4" fill="#211D17"/><path d="M26 44c2 2.4 10 2.4 12 0" stroke="#211D17" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg>`;
-const ICON: `data:image/svg+xml;base64,${string}` = `data:image/svg+xml;base64,${btoa(ICON_SVG)}`;
+// The A-mask mark: what wallet pickers (Jupiter and others) show for Alias.
+const ICON: `data:image/svg+xml;base64,${string}` = `data:image/svg+xml;base64,${btoa(markSvg(64))}`;
 
 const CHAINS = ['solana:mainnet', 'solana:devnet'] as const;
 

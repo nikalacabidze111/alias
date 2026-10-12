@@ -66524,12 +66524,39 @@ async function decryptJson(key, payload) {
 // src/background/aliases.ts
 init_build_inject();
 
+// src/shared/emoji.ts
+init_build_inject();
+function graphemes(s) {
+  const Seg = Intl.Segmenter;
+  if (Seg) return [...new Seg(void 0, { granularity: "grapheme" }).segment(s)].map((g) => g.segment);
+  return [...s];
+}
+function isSingleEmoji(value) {
+  const s = value.trim();
+  if (!s || s.length > 16) return false;
+  if (graphemes(s).length !== 1) return false;
+  return new RegExp("\\p{Extended_Pictographic}|\\p{Regional_Indicator}", "u").test(s);
+}
+
 // src/background/settings.ts
 init_build_inject();
 
 // src/shared/rpc.ts
 init_build_inject();
 init_index_browser_esm();
+
+// src/shared/hosting.ts
+init_build_inject();
+var ALIAS_SERVER = true ? "https://alias.nikalacabidze111.workers.dev" : "";
+var LOCAL_FUNDING_PAGE = "http://localhost:8765";
+function defaultFundingPage(server = ALIAS_SERVER) {
+  return server || LOCAL_FUNDING_PAGE;
+}
+function relayRpcUrl(server = ALIAS_SERVER) {
+  return server ? `${server}/rpc` : null;
+}
+
+// src/shared/rpc.ts
 var RPC_FALLBACKS = {
   "mainnet-beta": [
     "https://solana-rpc.publicnode.com",
@@ -66540,8 +66567,9 @@ var RPC_FALLBACKS = {
   devnet: ["https://api.devnet.solana.com"]
 };
 var TRY_NEXT = /* @__PURE__ */ new Set([401, 403, 404, 405, 429, 500, 502, 503, 504]);
-function endpointsFor(network, customRpc) {
+function endpointsFor(network, customRpc, relay = relayRpcUrl()) {
   const list = [...RPC_FALLBACKS[network]];
+  if (relay && network === "mainnet-beta") list.unshift(relay);
   if (customRpc && /^https:\/\/[^\s]+$/.test(customRpc.trim())) list.unshift(customRpc.trim());
   return [...new Set(list)];
 }
@@ -66581,11 +66609,15 @@ var DEFAULT_SETTINGS = {
   mainnetEnabled: false,
   perOperationSol: DEFAULT_LIMITS.perOperationSol,
   perTransactionSol: DEFAULT_LIMITS.perTransactionSol,
-  companionUrl: "http://localhost:8765"
+  companionUrl: defaultFundingPage()
 };
 async function getSettings() {
   const stored = await chrome.storage.local.get(SETTINGS_KEY);
-  return { ...DEFAULT_SETTINGS, ...stored[SETTINGS_KEY] ?? {} };
+  const merged = { ...DEFAULT_SETTINGS, ...stored[SETTINGS_KEY] ?? {} };
+  if (merged.companionUrl.replace(/\/+$/, "") === LOCAL_FUNDING_PAGE && DEFAULT_SETTINGS.companionUrl !== LOCAL_FUNDING_PAGE) {
+    merged.companionUrl = DEFAULT_SETTINGS.companionUrl;
+  }
+  return merged;
 }
 async function updateSettings(patch) {
   const current = await getSettings();
@@ -66622,8 +66654,9 @@ async function saveAliases(list) {
 async function getAlias(id) {
   return (await listAliases()).find((a) => a.id === id);
 }
-async function createAlias(name, kind) {
+async function createAlias(name, kind, emoji) {
   if (!await getSessionSeed()) throw new Error("Vault is locked");
+  if (emoji !== void 0 && !isSingleEmoji(emoji)) throw new Error("Pick a single emoji");
   const list = await listAliases();
   const index = list.length === 0 ? 0 : Math.max(...list.map((a) => a.index)) + 1;
   const keypair = await deriveAliasKeypair(index);
@@ -66634,6 +66667,7 @@ async function createAlias(name, kind) {
     address: keypair.publicKey.toBase58(),
     index,
     avatarSeed: Math.floor(Math.random() * 1e6),
+    ...emoji ? { emoji: emoji.trim() } : {},
     createdAt: Date.now()
   };
   list.push(info);
@@ -66646,6 +66680,23 @@ async function renameAlias(id, name) {
   if (!alias) throw new Error("Alias not found");
   alias.name = name.trim() || alias.name;
   await saveAliases(list);
+}
+async function updateAlias(id, patch) {
+  const list = await listAliases();
+  const alias = list.find((a) => a.id === id);
+  if (!alias) throw new Error("Alias not found");
+  if (patch.name !== void 0) {
+    const name = patch.name.trim();
+    if (!name) throw new Error("Give the alias a name");
+    if (name.length > 40) throw new Error("Keep the name under 40 characters");
+    alias.name = name;
+  }
+  if (patch.emoji !== void 0) {
+    if (!isSingleEmoji(patch.emoji)) throw new Error("Pick a single emoji");
+    alias.emoji = patch.emoji.trim();
+  }
+  await saveAliases(list);
+  return alias;
 }
 function defaultName(kind) {
   switch (kind) {
@@ -67056,7 +67107,9 @@ async function handlePrivileged(req) {
     case "alias.list":
       return ok(await listAliases());
     case "alias.create":
-      return ok(await createAlias(req.name, req.kind));
+      return ok(await createAlias(req.name, req.kind, req.emoji));
+    case "alias.update":
+      return ok(await updateAlias(req.id, { name: req.name, emoji: req.emoji }));
     case "alias.rename":
       await renameAlias(req.id, req.name);
       return ok(true);
