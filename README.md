@@ -44,14 +44,6 @@ Everything below needs real Chrome, Phantom installed, and a small amount of SOL
 
 If a leg stalls: nothing is ever resent automatically. Open History → the operation → **Recheck status** or **Continue the withdrawal**. Your deposit stays in your shielded balance (owned by the alias key, recovered by your 12 words) until the withdrawal goes through.
 
-## Demo script (~2.5 min)
-
-1. (15s) "Every app I connect to sees the same wallet. Alias gives each app its own identity." Open the popup: mascot, one Trading Alias, balance.
-2. (40s) "Fund it privately from my main wallet." Fund privately → 0.02 SOL → fee estimate → Phantom signs the pool deposit → ops window: deposit confirmed on Solscan, pool pays the alias, second Solscan link. "Two separate pool transactions. My main wallet never touches the alias."
-3. (40s) "Jupiter discovers Alias like any wallet." jup.ag → Connect → Alias → approval window: 'jup.ag · Use Trading Alias here' → connected. Make the tiny swap, approve in Alias, token lands.
-4. (30s) "And funds come back the same way." Return privately → destination is already my Phantom → both legs confirm → Solscan. Point at the timing choice: "For real use I'd pick Tomorrow, so the deposit and the payout don't line up in time."
-5. (15s) History screen: every operation journaled, Explorer links, recoverable with 12 words. "Separation, not magic: trades under an alias are still public. But the funding link isn't."
-
 ## Commands
 
 | command | what it does |
