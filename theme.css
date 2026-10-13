@@ -1,0 +1,310 @@
+/* Alias design system, matched to the logo: ink and lilac on warm paper.
+   Status colors (green done, red real-money/failed) are the only other hues. */
+@font-face {
+  font-family: 'Archivo';
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/archivo-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Archivo';
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/archivo-500.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Archivo';
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/archivo-600.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Archivo';
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/archivo-700.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Archivo';
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/archivo-800.woff2') format('woff2');
+}
+
+:root {
+  /* Brand */
+  --ink: #1e1812;
+  --ink-soft: #6a6155;
+  --lilac: #ae94f6;
+  --lilac-soft: #eee8fd;
+  --lilac-ink: #5b45a8;
+  /* Surfaces */
+  --cream: #f7f2e8; /* paper */
+  --cream-deep: #eee6d6;
+  --card: #fffcf6;
+  --line: #e2d8c6;
+  /* Status only */
+  --mint: #d6ecdd;
+  --mint-soft: #e5f2e9;
+  --mint-ink: #2a6e4a;
+  --coral: #b93a26;
+  --coral-soft: #f9e5df;
+  /* "In progress" is neutral lilac, not a third accent */
+  --amber-soft: var(--lilac-soft);
+  --amber-ink: var(--lilac-ink);
+  /* Shape */
+  --radius-card: 12px;
+  --radius-button: 10px;
+  --radius-chip: 8px;
+  --shadow-card: none;
+  --font: 'Archivo', 'Segoe UI', system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  background: var(--cream);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 14.5px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font-family: var(--font);
+  cursor: pointer;
+  border: none;
+  color: inherit;
+}
+
+input,
+select,
+textarea {
+  font-family: var(--font);
+  font-size: 14.5px;
+  color: var(--ink);
+}
+
+a {
+  color: var(--lilac-ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font-weight: 700;
+}
+
+h1,
+h2 {
+  letter-spacing: -0.02em;
+}
+
+:focus-visible {
+  outline: 2px solid var(--lilac-ink);
+  outline-offset: 2px;
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: var(--radius-button);
+  font-size: 14.5px;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  transition: background-color 0.12s ease, transform 0.08s ease;
+}
+.btn:active {
+  transform: translateY(1px);
+}
+.btn-primary {
+  background: var(--ink);
+  color: var(--cream);
+}
+.btn-primary:hover {
+  background: #352c22;
+}
+.btn-primary:disabled {
+  background: #cfc5b3;
+  color: #fff;
+  cursor: default;
+  transform: none;
+}
+.btn-outline {
+  background: transparent;
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1.5px var(--ink);
+}
+.btn-outline:hover {
+  background: rgba(30, 24, 18, 0.05);
+}
+/* Kept for older call sites: both map onto the two button styles above. */
+.btn-mint,
+.btn-soft {
+  background: transparent;
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1.5px var(--line);
+}
+.btn-mint:hover,
+.btn-soft:hover {
+  box-shadow: inset 0 0 0 1.5px var(--ink-soft);
+}
+.btn-danger,
+.btn-coral {
+  background: var(--coral);
+  color: #fff;
+}
+.btn-ghost {
+  background: transparent;
+  color: var(--ink-soft);
+  font-weight: 500;
+}
+.btn-ghost:hover {
+  color: var(--ink);
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+.chip-mint {
+  background: var(--mint-soft);
+  color: var(--mint-ink);
+}
+.chip-lilac,
+.chip-amber {
+  background: var(--lilac-soft);
+  color: var(--lilac-ink);
+}
+.chip-coral {
+  background: var(--coral-soft);
+  color: var(--coral);
+}
+.chip-ink {
+  background: var(--ink);
+  color: var(--cream);
+}
+
+.muted {
+  color: var(--ink-soft);
+}
+.small {
+  font-size: 12.5px;
+}
+.mono,
+.num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+.field {
+  width: 100%;
+  padding: 11px 13px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-button);
+  background: var(--card);
+  outline: none;
+}
+.field:focus {
+  border-color: var(--ink);
+}
+
+/* Brand mark (inline SVG) */
+.mark {
+  display: block;
+  flex: 0 0 auto;
+}
+
+/* Letter tile used for aliases and sites. */
+.tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  user-select: none;
+}
+.tile-0 {
+  background: var(--lilac);
+  color: var(--ink);
+}
+.tile-1 {
+  background: var(--ink);
+  color: var(--lilac);
+}
+.tile-2 {
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1.5px var(--ink);
+}
+.tile-3 {
+  background: var(--lilac-soft);
+  color: var(--lilac-ink);
+  box-shadow: inset 0 0 0 1px #d8ccf8;
+}
+.tile-site {
+  background: var(--cream-deep);
+  color: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Spinner, only for real network/proving work. */
+.spin {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  border-top-color: var(--ink);
+  animation: alias-spin 0.8s linear infinite;
+}
+@keyframes alias-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spin {
+    animation: alias-spin 2s linear infinite !important;
+  }
+}
+.tile-emoji {
+  background: var(--lilac-soft);
+  font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
+  font-weight: 400;
+}
+.tile-emoji.on-lilac {
+  background: var(--card);
+}
